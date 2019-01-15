@@ -16,7 +16,7 @@ class TodoItem extends StoreWidget<AppEvent> {
   }
 }
 
-class _TodoItemState extends StoreState<TodoItem, AppEvent, _Projection> {
+class _TodoItemState extends StoreState<TodoItem, AppEvent, _Store> {
   @override
   void initState() {
     super.initState();
@@ -69,39 +69,39 @@ class _TodoItemState extends StoreState<TodoItem, AppEvent, _Projection> {
     return Material(
         elevation: widget.isEditing ? 1 : 0,
         child: ListTile(
-            leading:
-                Checkbox(value: projection.isDone, onChanged: _clickedCheckbox),
+            leading: Checkbox(value: state.isDone, onChanged: _clickedCheckbox),
             title: widget.isEditing
                 ? TodoEditor(
-                    init: projection.content,
+                init: state.content,
                     editFocus: _editFocus,
                     onSubmit: _submittedEdit,
                     onUpdate: _updatedEdit)
                 : GestureDetector(
                     onTap: _tappedContent,
                     child: Text(
-                      '${projection.content}',
+                      '${state.content}',
                       style: Theme.of(context).textTheme.display1,
                     ))));
   }
 
-  _Projection projector(_Projection prev, Events<AppEvent> events) {
-    var next = prev ?? const _Projection();
+  @override
+  _Store reducer(_Store prev, AppEvent event) {
+    var next = prev;
 
-    for (final event in events.reversed) {
-      if (event is UpdatedTodoStatus && event.id == widget.id) {
-        next = next.update(isDone: event.isDone);
-        break;
-      }
+    if (event is UpdatedTodoStatus && event.id == widget.id) {
+      next = next.update(isDone: event.isDone);
     }
-    for (final event in events.reversed) {
-      if (event is UpdatedTodoContent && event.id == widget.id) {
-        next = next.update(content: event.content);
-        break;
-      }
+
+    if (event is UpdatedTodoContent && event.id == widget.id) {
+      next = next.update(content: event.content);
     }
 
     return next;
+  }
+
+  @override
+  _Store initializer(List<AppEvent> events) {
+    return events.fold(_Store(isDone: false, content: ''), reducer);
   }
 }
 
@@ -160,7 +160,7 @@ class _TodoEditorState extends State<TodoEditor> {
 }
 
 @immutable
-class _Projection {
+class _Store {
   final bool isDone;
   final String content;
 
@@ -168,9 +168,9 @@ class _Projection {
     isDone = isDone ?? this.isDone;
     content = content ?? this.content;
     if (isDone != this.isDone || content != this.content)
-      return _Projection(isDone: isDone, content: content);
+      return _Store(isDone: isDone, content: content);
     return this;
   }
 
-  const _Projection({this.isDone = false, this.content = ''});
+  const _Store({this.isDone = false, this.content = ''});
 }

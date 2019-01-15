@@ -17,22 +17,8 @@ class TodoHome extends StoreWidget<AppEvent> {
   }
 }
 
-class _TodoHomeState extends StoreState<TodoHome, AppEvent, _TodoHomeStore> {
-  _TodoHomeStore projector(_TodoHomeStore prev, List<AppEvent> events) {
-    var next = prev ?? const _TodoHomeStore(editingItem: '', itemIDs: []);
-
-    for (final e in events) {
-      if (e is AddedTodo) next = next.push(e.id);
-      if (e is RemovedTodo) next = next.remove(e.id);
-      if (e is StartedEditingTodo) next = next.editing(e.id);
-      if (e is StoppedEditingTodo && e.id == next.editingItem)
-        next = next.editing('');
-    }
-
-    return next;
-  }
-
-  _addClicked() {
+class _TodoHomeState extends StoreState<TodoHome, AppEvent, _Store> {
+  _clickedAdd() {
     final id = Uuid().v4();
     dispatch(AddedTodo(id, ''));
     dispatch(StartedEditingTodo(id));
@@ -65,45 +51,63 @@ class _TodoHomeState extends StoreState<TodoHome, AppEvent, _TodoHomeStore> {
               Expanded(
                   child: ListView(
                 shrinkWrap: true,
-                children: projection.itemIDs
+                    children: state.itemIDs
                     .map((id) => TodoItem(
                           id: id,
                           store: widget.store,
-                          isEditing: projection.editingItem == id,
+                      isEditing: state.editingItem == id,
                         ))
                     .toList(),
               ))
             ],
           ),
           floatingActionButton: FloatingActionButton(
-            onPressed: _addClicked,
-            tooltip: 'Increment',
+            onPressed: _clickedAdd,
+            tooltip: 'Add Todo',
             child: Icon(Icons.add),
           ),
         ));
   }
+
+  @override
+  _Store reducer(_Store prev, AppEvent event) {
+    var next = prev;
+
+    if (event is AddedTodo) next = next.push(event.id);
+    if (event is RemovedTodo) next = next.remove(event.id);
+    if (event is StartedEditingTodo) next = next.editing(event.id);
+    if (event is StoppedEditingTodo && event.id == next.editingItem)
+      next = next.editing('');
+
+    return next;
+  }
+
+  @override
+  _Store initializer(List<AppEvent> events) {
+    return events.fold(_Store(itemIDs: [], editingItem: ''), reducer);
+  }
 }
 
 @immutable
-class _TodoHomeStore {
+class _Store {
   final List<String> itemIDs;
 
-  _TodoHomeStore push(String itemID) {
-    return _TodoHomeStore(
+  _Store push(String itemID) {
+    return _Store(
         itemIDs: itemIDs.toList()..add(itemID), editingItem: editingItem);
   }
 
-  _TodoHomeStore remove(String itemID) {
-    return _TodoHomeStore(
+  _Store remove(String itemID) {
+    return _Store(
         itemIDs: itemIDs.where((id) => id != itemID).toList(),
         editingItem: editingItem);
   }
 
-  _TodoHomeStore editing(String itemID) {
-    return _TodoHomeStore(itemIDs: itemIDs, editingItem: itemID);
+  _Store editing(String itemID) {
+    return _Store(itemIDs: itemIDs, editingItem: itemID);
   }
 
   final String editingItem;
 
-  const _TodoHomeStore({this.itemIDs, this.editingItem});
+  const _Store({this.itemIDs, this.editingItem});
 }

@@ -2,14 +2,12 @@ import 'package:flock/flock.dart';
 import 'package:flock_todomvc/ToDoHome.dart';
 import 'package:flock_todomvc/events.dart';
 import 'package:flutter/material.dart';
-import 'package:sensors/sensors.dart';
 
-void main() => runApp(ToDoMVC());
+void main() => runApp(TodoMVC());
 
-final store = createStore<AppEvent>(
-    [], [debugPrintDispatch, withShakeBack(userAccelerometerEvents)]);
+class TodoMVC extends StatelessWidget {
+  final store = createStore<AppEvent>([], [debugPrintDispatch]);
 
-class ToDoMVC extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,34 +21,40 @@ class ToDoMVC extends StatelessWidget {
 }
 
 StoreCreator<E> debugPrintDispatch<E>(StoreCreator<E> inner) {
-  return (Iterable<E> prepublish) {
+  return (List<E> prepublish) {
     return _DebugPrintDispatchStore(inner(prepublish));
   };
 }
 
-class _DebugPrintDispatchStore<E> extends InnerStore<E> {
-  _DebugPrintDispatchStore(this.inner);
+class _DebugPrintDispatchStore<E> extends StoreForEnhancer<E> {
+  _DebugPrintDispatchStore(this._inner);
 
-  InnerStore<E> inner;
-
-  @override
-  void dispatch(E event) {
-    debugPrint(event.toString());
-    inner.dispatch(event);
-  }
-
-  @override
-  P getState<P>(projector) {
-    return inner.getState(projector);
-  }
-
-  @override
-  void replaceEvents(Iterable<E> events) {
-    return inner.replaceEvents(events);
-  }
+  StoreForEnhancer<E> _inner;
 
   @override
   subscribe(subscriber) {
-    return inner.subscribe(subscriber);
+    return _inner.subscribe(subscriber);
+  }
+
+  @override
+  int get cursor => _inner.cursor;
+
+  @override
+  List<E> get events => _inner.events;
+
+  @override
+  void dispatch([E event]) {
+    debugPrint(event.toString());
+    _inner.dispatch(event);
+  }
+
+  @override
+  P getState<P>(projector, initializer) {
+    return _inner.getState(projector, initializer);
+  }
+
+  @override
+  void replaceEvents(List<E> events, [int cursor]) {
+    _inner.replaceEvents(events, cursor);
   }
 }
